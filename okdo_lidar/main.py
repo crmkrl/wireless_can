@@ -9,7 +9,7 @@ def parse_lidar_data(data):
         return None
 
     if data[0] != 0x54 or data[1] != 0x2C:  # Check header bytes
-        print("Invalid packet header")
+        print(f"Invalid packet header: {data[:2]}")
         return None
 
     # Extract fields
@@ -30,10 +30,10 @@ def parse_lidar_data(data):
         distances.append(distance)
         intensities.append(intensity)
 
-    # Validate checksum (basic example, can vary per protocol)
+    # Validate checksum
     calculated_checksum = sum(data[:-2]) & 0xFFFF
     if calculated_checksum != checksum:
-        print("Checksum mismatch")
+        print(f"Checksum mismatch: calculated={calculated_checksum}, expected={checksum}")
         return None
 
     return {
@@ -54,7 +54,10 @@ def read_lidar_data(port='/dev/serial0', baudrate=115200):
 
             while True:
                 # Read incoming bytes
-                buffer.extend(ser.read(1024))
+                raw_data = ser.read(1024)
+                if raw_data:
+                    print(f"Raw data received: {raw_data[:20]}...")  # Print a preview of raw data
+                buffer.extend(raw_data)
 
                 # Look for start of a valid packet
                 while len(buffer) >= 47:  # Minimum packet length
@@ -69,10 +72,11 @@ def read_lidar_data(port='/dev/serial0', baudrate=115200):
                             print(f"Speed: {data['speed']}°/s")
                             print(f"Start Angle: {data['start_angle']}°")
                             print(f"End Angle: {data['end_angle']}°")
-                            print(f"Distances: {data['distances']}")
-                            print(f"Intensities: {data['intensities']}")
+                            print(f"Distances: {data['distances'][:5]}...")  # Preview first 5 distances
+                            print(f"Intensities: {data['intensities'][:5]}...")  # Preview first 5 intensities
                     else:
                         # Remove invalid byte
+                        print(f"Invalid start byte: {buffer[0]}")
                         buffer.pop(0)
     except serial.SerialException as e:
         print(f"Serial error: {e}")
